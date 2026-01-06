@@ -23,8 +23,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tierLists       TierList[]
-  tierListsGlobal TierListGlobal[]
+  tierLists TierList[]
+  payments  Payment[]
 }
 
 enum Role {
@@ -34,43 +34,74 @@ enum Role {
 
 model Company {
   id        String   @id @default(uuid())
-  name      String
+  name      String   @unique
+  imageUrl  String   @default("")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tierListItems TierListItem[]
-}
-
-model TierListGlobal {
-  id        String   @id @default(uuid())
-  company   String
-  category  String
-  userId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tierListItems       TierListItem[]
+  mutualizedTierLists MutualizedTierList[]
 }
 
 model TierList {
-  id        String   @id @default(uuid())
+  id        String         @id @default(uuid())
   userId    String
   title     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  status    TierListStatus @default(PENDING_PAYMENT)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 
-  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items TierListItem[]
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items   TierListItem[]
+  payment Payment?
 }
 
 model TierListItem {
   id         String   @id @default(uuid())
   tierListId String
   companyId  String
-  categoryId String
+  category   String // S, A, B, C, D
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   tierList TierList @relation(fields: [tierListId], references: [id], onDelete: Cascade)
   company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id              String        @id @default(uuid())
+  userId          String
+  tierListId      String        @unique
+  amount          Float
+  stripePaymentId String
+  status          PaymentStatus @default(PENDING)
+  createdAt       DateTime      @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tierList TierList @relation(fields: [tierListId], references: [id], onDelete: Cascade)
+}
+
+model MutualizedTierList {
+  id               String   @id @default(uuid())
+  companyId        String   @unique
+  averageScore     Float    @default(0)
+  finalRank        String   @default("D")
+  voteDistribution Json     @default("{\"S\":0,\"A\":0,\"B\":0,\"C\":0,\"D\":0}")
+  lastCalculatedAt DateTime @default(now())
+  pdfUrl           String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+enum TierListStatus {
+  PENDING_PAYMENT
+  PAID
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
 }
