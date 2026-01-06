@@ -52,6 +52,6 @@ export class CompanyService implements CompanyDatasourcePort {
     throw new Error('Method not implemented.');
   }
   all(): Promise<Company[]> {
-    throw new Error('Method not implemented.');
+    return this.prisma.company.findMany();
   }
 }
