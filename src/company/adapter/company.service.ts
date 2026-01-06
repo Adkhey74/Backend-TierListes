@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   HttpException,
   Injectable,
   InternalServerErrorException,
@@ -16,6 +15,7 @@ export class CompanyService implements CompanyDatasourcePort {
   byId(id: number): Promise<Company | null> {
     throw new Error('Method not implemented.');
   }
+
   async persist(dto: AddCompanyDto): Promise<Company> {
     const nbExistingCompanies = await this.prisma.company.count();
 

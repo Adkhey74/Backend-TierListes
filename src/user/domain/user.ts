@@ -1,6 +1,12 @@
+import { Role } from 'generated/prisma/enums';
+
 export class User {
   constructor(
-    public id: number,
-    public name: string,
+    public id: string,
+    public firstName: string,
+    public lastName: string,
+    public email: string,
+    public password: string,
+    public role: Role,
   ) {}
 }
