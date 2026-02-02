@@ -1,47 +1,29 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { MutualizedTierList } from '../../../../domain/entities/mutualized-tier-list.entity';
-import { VoteDistribution } from '../../../../domain/value-objects/vote-distribution.vo';
-import {
-  Category,
-  CategoryRank,
-} from '../../../../domain/value-objects/category.vo';
 import {
   MutualizedTierListRepositoryPort,
   CreateMutualizedTierListData,
+  UpdateMutualizedTierListData,
 } from '../../../../domain/ports/repositories/mutualized-tier-list.repository.port';
-
-type VoteDistributionJson = {
-  S: number;
-  A: number;
-  B: number;
-  C: number;
-  D: number;
-};
 
 @Injectable()
 export class PrismaMutualizedRepository implements MutualizedTierListRepositoryPort {
   constructor(private readonly prisma: PrismaService) {}
 
   private toDomain(prismaMutualized: {
-    id: string;
     companyId: string;
-    averageScore: number;
-    finalRank: string;
-    voteDistribution: unknown;
-    lastCalculatedAt: Date;
-    pdfUrl: string | null;
+    category: string;
+    numberOfVotes: number;
+    createdAt: Date;
+    updatedAt: Date;
   }): MutualizedTierList {
-    const votes = prismaMutualized.voteDistribution as VoteDistributionJson;
-
     return MutualizedTierList.create({
-      id: prismaMutualized.id,
-      logoId: prismaMutualized.companyId,
-      averageScore: prismaMutualized.averageScore,
-      finalRank: Category.fromString(prismaMutualized.finalRank),
-      voteDistribution: VoteDistribution.create(votes),
-      lastCalculatedAt: prismaMutualized.lastCalculatedAt,
-      pdfUrl: prismaMutualized.pdfUrl ?? undefined,
+      companyId: prismaMutualized.companyId,
+      category: prismaMutualized.category as 'S' | 'A' | 'B' | 'C' | 'D',
+      numberOfVotes: prismaMutualized.numberOfVotes,
+      createdAt: prismaMutualized.createdAt,
+      updatedAt: prismaMutualized.updatedAt,
     });
   }
 
@@ -50,19 +32,14 @@ export class PrismaMutualizedRepository implements MutualizedTierListRepositoryP
     return mutualizedList.map((m) => this.toDomain(m));
   }
 
-  async findById(id: string): Promise<MutualizedTierList | null> {
+  async findByCompanyIdAndCategory(
+    companyId: string,
+    category: string,
+  ): Promise<MutualizedTierList | null> {
     const mutualized = await this.prisma.mutualizedTierList.findUnique({
-      where: { id },
-    });
-
-    if (!mutualized) return null;
-
-    return this.toDomain(mutualized);
-  }
-
-  async findByLogoId(logoId: string): Promise<MutualizedTierList | null> {
-    const mutualized = await this.prisma.mutualizedTierList.findUnique({
-      where: { companyId: logoId },
+      where: {
+        companyId_category: { companyId, category },
+      },
     });
 
     if (!mutualized) return null;
@@ -75,36 +52,28 @@ export class PrismaMutualizedRepository implements MutualizedTierListRepositoryP
   ): Promise<MutualizedTierList> {
     const mutualized = await this.prisma.mutualizedTierList.create({
       data: {
-        companyId: data.logoId,
+        companyId: data.companyId,
+        category: data.category,
+        numberOfVotes: data.numberOfVotes,
       },
     });
 
     return this.toDomain(mutualized);
   }
 
-  async updateVoteDistribution(
-    id: string,
-    distribution: VoteDistribution,
-    averageScore: number,
-    finalRank: CategoryRank,
+  async updateNumberOfVotes(
+    data: UpdateMutualizedTierListData,
   ): Promise<MutualizedTierList> {
     const mutualized = await this.prisma.mutualizedTierList.update({
-      where: { id },
-      data: {
-        voteDistribution: distribution.toJSON(),
-        averageScore,
-        finalRank,
-        lastCalculatedAt: new Date(),
+      where: {
+        companyId_category: {
+          companyId: data.companyId,
+          category: data.category,
+        },
       },
-    });
-
-    return this.toDomain(mutualized);
-  }
-
-  async updatePdfUrl(id: string, pdfUrl: string): Promise<MutualizedTierList> {
-    const mutualized = await this.prisma.mutualizedTierList.update({
-      where: { id },
-      data: { pdfUrl },
+      data: {
+        numberOfVotes: data.numberOfVotes,
+      },
     });
 
     return this.toDomain(mutualized);

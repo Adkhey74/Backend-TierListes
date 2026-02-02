@@ -5,10 +5,7 @@ import {
   TierListStatus,
 } from '../../../../domain/entities/tier-list.entity';
 import { TierListItem } from '../../../../domain/entities/tier-list-item.entity';
-import {
-  Category,
-  CategoryRank,
-} from '../../../../domain/value-objects/category.vo';
+import { Category } from '../../../../domain/value-objects/category.vo';
 import {
   TierListRepositoryPort,
   CreateTierListData,
@@ -130,10 +127,13 @@ export class PrismaTierListRepository implements TierListRepositoryPort {
     await this.prisma.tierList.delete({ where: { id } });
   }
 
-  async addItem(data: CreateTierListItemData): Promise<TierListItem> {
+  async addItem(
+    tierListId: string,
+    data: CreateTierListItemData,
+  ): Promise<TierListItem> {
     const item = await this.prisma.tierListItem.create({
       data: {
-        tierListId: data.tierListId,
+        tierListId,
         companyId: data.logoId,
         category: data.categoryRank,
       },
@@ -152,5 +152,22 @@ export class PrismaTierListRepository implements TierListRepositoryPort {
     });
 
     return items.map((item) => this.toDomainItem(item));
+  }
+
+  async saveItems(items: TierListItem[], tierListId: string): Promise<void> {
+    await this.prisma.tierListItem.deleteMany({
+      where: { tierListId },
+    });
+
+    if (items.length === 0) return;
+
+    await this.prisma.tierListItem.createMany({
+      data: items.map((item) => ({
+        id: item.id,
+        tierListId,
+        companyId: item.logoId,
+        category: item.category.toString(),
+      })),
+    });
   }
 }

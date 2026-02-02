@@ -8,7 +8,6 @@ export interface CreateTierListData {
 }
 
 export interface CreateTierListItemData {
-  tierListId: string;
   logoId: string;
   categoryRank: CategoryRank;
 }
@@ -22,8 +21,7 @@ export interface TierListRepositoryPort {
   delete(id: string): Promise<void>;
 
   // Items
-  addItem(data: CreateTierListItemData): Promise<TierListItem>;
-  removeItem(itemId: string): Promise<void>;
+  saveItems(items: TierListItem[], tierListId: string): Promise<void>;
   getItems(tierListId: string): Promise<TierListItem[]>;
 }
 

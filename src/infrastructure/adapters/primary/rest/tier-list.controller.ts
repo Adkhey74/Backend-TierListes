@@ -7,28 +7,40 @@ import {
   UseGuards,
   Delete,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
-import { CurrentUser, CurrentUserPayload } from '../decorators/current-user.decorator';
+import {
+  CurrentUser,
+  CurrentUserPayload,
+} from '../decorators/current-user.decorator';
 import {
   CreateTierListUseCase,
   GetUserTierListsUseCase,
   GetTierListByIdUseCase,
-  AddItemToTierListUseCase,
+  SaveItemsToTierListUseCase,
 } from '../../../../application/uses-cases/tier-list';
 import { ProcessPaymentUseCase } from '../../../../application/uses-cases/payment';
 import {
-  CalculateMutualizedUseCase,
+  CreateMutualizedUseCase,
+  UpdateMutualizedUseCase,
   GetAllMutualizedUseCase,
 } from '../../../../application/uses-cases/mutualized';
 import {
   CreateTierListDto,
-  AddItemDto,
   TierListResponseDto,
   ProcessPaymentDto,
   PaymentResponseDto,
   MutualizedTierListResponseDto,
+  SaveItemsToTierListDto,
 } from '../dto/tier-list.dto';
+import { TierList } from '../../../../domain/entities/tier-list.entity';
+import { TierListItem } from '../../../../domain/entities/tier-list-item.entity';
+import { DeleteTierListUseCase } from 'src/application/uses-cases/tier-list/delete-tier-list.usecase';
 
 @ApiTags('tier-lists')
 @Controller('tier-lists')
@@ -37,27 +49,34 @@ export class TierListController {
     private readonly createTierListUseCase: CreateTierListUseCase,
     private readonly getUserTierListsUseCase: GetUserTierListsUseCase,
     private readonly getTierListByIdUseCase: GetTierListByIdUseCase,
-    private readonly addItemUseCase: AddItemToTierListUseCase,
     private readonly processPaymentUseCase: ProcessPaymentUseCase,
-    private readonly calculateMutualizedUseCase: CalculateMutualizedUseCase,
+    private readonly createMutualizedUseCase: CreateMutualizedUseCase,
+    private readonly updateMutualizedUseCase: UpdateMutualizedUseCase,
     private readonly getAllMutualizedUseCase: GetAllMutualizedUseCase,
+    private readonly saveItemsToTierListUseCase: SaveItemsToTierListUseCase,
+    private readonly deleteTierListUseCase: DeleteTierListUseCase,
   ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Créer une nouvelle TierList' })
+  @ApiOperation({
+    summary: 'Créer une nouvelle TierList (avec items optionnels)',
+  })
   @ApiResponse({ status: 201, type: TierListResponseDto })
   async create(
     @CurrentUser() user: CurrentUserPayload,
     @Body() dto: CreateTierListDto,
   ): Promise<TierListResponseDto> {
+    const { title, items } = dto;
     const tierList = await this.createTierListUseCase.execute({
       userId: user.id,
-      title: dto.title,
+      title,
+      items,
     });
 
-    return this.toResponseDto(tierList);
+    const hasItems = (tierList.items?.length ?? 0) > 0;
+    return this.toResponseDto(tierList, hasItems);
   }
 
   @Get('my')
@@ -80,27 +99,28 @@ export class TierListController {
     return tierList ? this.toResponseDto(tierList) : null;
   }
 
-  @Post(':id/items')
+  @Delete(':id')
+  @ApiOperation({ summary: 'Supprimer une TierList par ID' })
+  @ApiResponse({ status: 200, description: 'TierList supprimée avec succès' })
+  async delete(@Param('id') id: string): Promise<{ success: true }> {
+    await this.deleteTierListUseCase.execute(id);
+    return { success: true };
+  }
+
+  @Post(':id/save-items')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Ajouter un item à une TierList' })
-  @ApiResponse({ status: 201 })
-  async addItem(
+  @ApiOperation({ summary: "Sauvegarder les items d'une TierList" })
+  @ApiResponse({ status: 201, type: TierListResponseDto })
+  @ApiResponse({ status: 400, description: 'Plus de 10 items' })
+  @ApiResponse({ status: 404, description: 'TierList non trouvée' })
+  async saveItems(
     @Param('id') tierListId: string,
-    @Body() dto: AddItemDto,
-  ) {
-    const item = await this.addItemUseCase.execute({
-      tierListId,
-      logoId: dto.logoId,
-      categoryRank: dto.category,
-    });
-
-    return {
-      id: item.id,
-      tierListId: item.tierListId,
-      logoId: item.logoId,
-      category: item.category.rank,
-    };
+    @Body() dto: SaveItemsToTierListDto,
+  ): Promise<TierListResponseDto> {
+    await this.saveItemsToTierListUseCase.execute(dto, tierListId);
+    const tierList = await this.getTierListByIdUseCase.execute(tierListId);
+    return this.toResponseDto(tierList!);
   }
 
   @Post(':id/pay')
@@ -134,49 +154,39 @@ export class TierListController {
     const mutualizedList = await this.getAllMutualizedUseCase.execute();
 
     return mutualizedList.map((m) => ({
-      id: m.id,
-      logoId: m.logoId,
-      averageScore: m.averageScore,
-      finalRank: m.finalRank.rank,
-      voteDistribution: m.voteDistribution.toJSON(),
-      pdfUrl: m.pdfUrl,
-      lastCalculatedAt: m.lastCalculatedAt,
+      companyId: m.companyId,
+      category: m.category,
+      numberOfVotes: m.numberOfVotes,
+      createdAt: m.createdAt ?? new Date(),
+      updatedAt: m.updatedAt ?? new Date(),
     }));
   }
 
-  @Post('mutualized/calculate/:logoId')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Recalculer le classement mutualisé pour un logo' })
-  @ApiResponse({ status: 200, type: MutualizedTierListResponseDto })
-  async calculateMutualized(
-    @Param('logoId') logoId: string,
-  ): Promise<MutualizedTierListResponseDto> {
-    const mutualized = await this.calculateMutualizedUseCase.execute(logoId);
-
-    return {
-      id: mutualized.id,
-      logoId: mutualized.logoId,
-      averageScore: mutualized.averageScore,
-      finalRank: mutualized.finalRank.rank,
-      voteDistribution: mutualized.voteDistribution.toJSON(),
-      pdfUrl: mutualized.pdfUrl,
-      lastCalculatedAt: mutualized.lastCalculatedAt,
-    };
-  }
-
-  private toResponseDto(tierList: any): TierListResponseDto {
+  private toResponseDto(
+    tierList: TierList,
+    withItems = false,
+  ): TierListResponseDto {
+    if (withItems) {
+      return {
+        id: tierList.id,
+        userId: tierList.userId,
+        title: tierList.title,
+        status: tierList.status,
+        items: tierList.items.map((item: TierListItem) => ({
+          id: item.id,
+          tierListId: item.tierListId,
+          logoId: item.logoId,
+          category: item.category.rank,
+        })),
+        createdAt: tierList.createdAt,
+        updatedAt: tierList.updatedAt,
+      };
+    }
     return {
       id: tierList.id,
       userId: tierList.userId,
       title: tierList.title,
       status: tierList.status,
-      items: tierList.items.map((item: any) => ({
-        id: item.id,
-        tierListId: item.tierListId,
-        logoId: item.logoId,
-        category: item.category.rank,
-      })),
       createdAt: tierList.createdAt,
       updatedAt: tierList.updatedAt,
     };

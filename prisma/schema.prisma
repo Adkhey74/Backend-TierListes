@@ -82,17 +82,15 @@ model Payment {
 }
 
 model MutualizedTierList {
-  id               String   @id @default(uuid())
-  companyId        String   @unique
-  averageScore     Float    @default(0)
-  finalRank        String   @default("D")
-  voteDistribution Json     @default("{\"S\":0,\"A\":0,\"B\":0,\"C\":0,\"D\":0}")
-  lastCalculatedAt DateTime @default(now())
-  pdfUrl           String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  companyId     String
+  category      String
+  numberOfVotes Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@id([companyId, category])
 }
 
 enum TierListStatus {

@@ -24,20 +24,24 @@ export class GeneratePdfUseCase {
     private readonly storageService: StorageServicePort,
   ) {}
 
-  async execute(mutualizedId: string): Promise<MutualizedTierList> {
-    const mutualized = await this.mutualizedRepository.findById(mutualizedId);
+  async execute(
+    companyId: string,
+    category: string,
+  ): Promise<MutualizedTierList> {
+    const mutualized = await this.mutualizedRepository.findByCompanyIdAndCategory(
+      companyId,
+      category,
+    );
 
     if (!mutualized) {
       throw new NotFoundException('MutualizedTierList non trouvée');
     }
 
-    // Générer le PDF
     const pdfBuffer = await this.pdfGenerator.generateMutualizedTierListPdf(
       mutualized,
     );
 
-    // Upload le PDF vers le storage
-    const fileName = `mutualized-${mutualizedId}-${Date.now()}.pdf`;
+    const fileName = `mutualized-${companyId}-${category}-${Date.now()}.pdf`;
     await this.storageService.uploadFile(
       {
         buffer: pdfBuffer,
@@ -48,10 +52,6 @@ export class GeneratePdfUseCase {
       fileName,
     );
 
-    // Récupérer l'URL du PDF
-    const pdfUrl = await this.storageService.getFileUrl(fileName);
-
-    // Mettre à jour le MutualizedTierList avec l'URL du PDF
-    return this.mutualizedRepository.updatePdfUrl(mutualizedId, pdfUrl);
+    return mutualized;
   }
 }

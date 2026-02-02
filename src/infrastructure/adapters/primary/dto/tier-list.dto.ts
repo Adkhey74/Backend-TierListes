@@ -1,33 +1,71 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsIn, IsUUID } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsOptional,
+  IsIn,
+  IsArray,
+  IsInt,
+  Min,
+  ValidateNested,
+  ArrayMaxSize,
+} from 'class-validator';
+
+export class TierListItemDto {
+  @ApiPropertyOptional({ description: "ID de l'item (généré si absent)" })
+  @IsOptional()
+  @IsString()
+  id?: string;
+
+  @ApiProperty({ description: 'ID du logo (Company)' })
+  @IsString()
+  @IsNotEmpty({ message: 'logoId est requis' })
+  logoId: string;
+
+  @ApiProperty({
+    enum: ['S', 'A', 'B', 'C', 'D'],
+    description: "Catégorie de l'item",
+  })
+  @IsString()
+  @IsIn(['S', 'A', 'B', 'C', 'D'], {
+    message: 'category doit être S, A, B, C ou D',
+  })
+  category: string;
+}
 
 export class CreateTierListDto {
   @ApiProperty({ example: 'Ma TierList Tech 2024' })
   @IsString()
   @IsNotEmpty({ message: 'Le titre est requis' })
   title: string;
-}
 
-export class AddItemDto {
-  @ApiProperty({ example: 'uuid-du-logo' })
-  @IsUUID()
-  @IsNotEmpty({ message: 'Le logoId est requis' })
-  logoId: string;
-
-  @ApiProperty({ enum: ['S', 'A', 'B', 'C', 'D'], example: 'A' })
-  @IsIn(['S', 'A', 'B', 'C', 'D'], {
-    message: 'La catégorie doit être S, A, B, C ou D',
+  @ApiPropertyOptional({
+    type: [TierListItemDto],
+    maxItems: 10,
+    description: 'Items optionnels à sauvegarder à la création',
   })
-  @IsNotEmpty({ message: 'La catégorie est requise' })
-  category: 'S' | 'A' | 'B' | 'C' | 'D';
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(10, {
+    message: 'Une TierList ne peut pas contenir plus de 10 items',
+  })
+  @ValidateNested({ each: true })
+  items?: TierListItemDto[];
 }
 
-export class TierListItemResponseDto {
+export class SaveItemsToTierListDto {
+  @ApiProperty({ type: [TierListItemDto], maxItems: 10 })
+  @IsArray()
+  @ArrayMaxSize(10, {
+    message: 'Une TierList ne peut pas contenir plus de 10 items',
+  })
+  @ValidateNested({ each: true })
+  items: TierListItemDto[];
+}
+
+export class TierListItemsResponseDto {
   @ApiProperty()
   id: string;
-
-  @ApiProperty()
-  tierListId: string;
 
   @ApiProperty()
   logoId: string;
@@ -49,8 +87,8 @@ export class TierListResponseDto {
   @ApiProperty({ enum: ['PENDING_PAYMENT', 'PAID'] })
   status: string;
 
-  @ApiProperty({ type: [TierListItemResponseDto] })
-  items: TierListItemResponseDto[];
+  @ApiProperty({ type: [TierListItemsResponseDto] })
+  items?: TierListItemsResponseDto[];
 
   @ApiProperty()
   createdAt: Date;
@@ -76,32 +114,63 @@ export class PaymentResponseDto {
   status: string;
 }
 
-export class MutualizedTierListResponseDto {
-  @ApiProperty()
-  id: string;
+export class CreateMutualizedDto {
+  @ApiProperty({ description: "ID de l'entreprise (Company)" })
+  @IsString()
+  @IsNotEmpty({ message: 'companyId est requis' })
+  companyId: string;
 
-  @ApiProperty()
-  logoId: string;
+  @ApiProperty({
+    enum: ['S', 'A', 'B', 'C', 'D'],
+    description: 'Catégorie du classement mutualisé',
+  })
+  @IsString()
+  @IsIn(['S', 'A', 'B', 'C', 'D'], {
+    message: 'category doit être S, A, B, C ou D',
+  })
+  category: string;
 
-  @ApiProperty()
-  averageScore: number;
-
-  @ApiProperty()
-  finalRank: string;
-
-  @ApiProperty()
-  voteDistribution: {
-    S: number;
-    A: number;
-    B: number;
-    C: number;
-    D: number;
-  };
-
-  @ApiPropertyOptional()
-  pdfUrl?: string;
-
-  @ApiProperty()
-  lastCalculatedAt: Date;
+  @ApiProperty({ description: 'Nombre de votes pour cette catégorie' })
+  @IsInt()
+  @Min(0)
+  numberOfVotes: number;
 }
 
+export class UpdateMutualizedDto {
+  @ApiProperty({ description: "ID de l'entreprise (Company)" })
+  @IsString()
+  @IsNotEmpty({ message: 'companyId est requis' })
+  companyId: string;
+
+  @ApiProperty({
+    enum: ['S', 'A', 'B', 'C', 'D'],
+    description: 'Catégorie du classement mutualisé',
+  })
+  @IsString()
+  @IsIn(['S', 'A', 'B', 'C', 'D'], {
+    message: 'category doit être S, A, B, C ou D',
+  })
+  category: string;
+
+  @ApiProperty({ description: 'Nouveau nombre de votes' })
+  @IsInt()
+  @Min(0)
+  numberOfVotes: number;
+}
+
+export class MutualizedTierListResponseDto {
+  @ApiProperty()
+  companyId: string;
+
+  @ApiProperty()
+  category: string;
+
+  @ApiProperty()
+  numberOfVotes: number;
+
+  @ApiProperty()
+  createdAt: Date;
+
+  @ApiProperty()
+  updatedAt: Date;
+}
