@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { MutualizedTierList } from '../../../domain/entities/mutualized-tier-list.entity';
 import {
+  CompanyVoteDistribution,
   MutualizedTierListRepositoryPort,
   MUTUALIZED_TIER_LIST_REPOSITORY,
 } from '../../../domain/ports/repositories/mutualized-tier-list.repository.port';
@@ -12,8 +12,7 @@ export class GetAllMutualizedUseCase {
     private readonly mutualizedRepository: MutualizedTierListRepositoryPort,
   ) {}
 
-  async execute(): Promise<MutualizedTierList[]> {
-    return this.mutualizedRepository.findAll();
+  async execute(): Promise<CompanyVoteDistribution[]> {
+    return this.mutualizedRepository.findAllCompaniesWithVoteDistribution();
   }
 }
-

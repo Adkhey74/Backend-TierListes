@@ -174,3 +174,28 @@ export class MutualizedTierListResponseDto {
   @ApiProperty()
   updatedAt: Date;
 }
+
+export class VoteDistributionDto {
+  @ApiProperty()
+  S: number;
+
+  @ApiProperty()
+  A: number;
+
+  @ApiProperty()
+  B: number;
+
+  @ApiProperty()
+  C: number;
+
+  @ApiProperty()
+  D: number;
+}
+
+export class CompanyVoteDistributionResponseDto {
+  @ApiProperty()
+  companyName: string;
+
+  @ApiProperty({ type: VoteDistributionDto })
+  voteDistribution: VoteDistributionDto;
+}

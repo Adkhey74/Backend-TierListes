@@ -41,6 +41,7 @@ import {
   ProcessPaymentDto,
   PaymentResponseDto,
   MutualizedTierListResponseDto,
+  CompanyVoteDistributionResponseDto,
   SaveItemsToTierListDto,
   CreateMutualizedDto,
   UpdateMutualizedDto,
@@ -242,17 +243,9 @@ export class TierListController {
 
   @Get('mutualized/all')
   @ApiOperation({ summary: 'Récupérer tous les classements mutualisés' })
-  @ApiResponse({ status: 200, type: [MutualizedTierListResponseDto] })
-  async getAllMutualized(): Promise<MutualizedTierListResponseDto[]> {
-    const mutualizedList = await this.getAllMutualizedUseCase.execute();
-
-    return mutualizedList.map((m) => ({
-      companyId: m.companyId,
-      category: m.category,
-      numberOfVotes: m.numberOfVotes,
-      createdAt: m.createdAt ?? new Date(),
-      updatedAt: m.updatedAt ?? new Date(),
-    }));
+  @ApiResponse({ status: 200, type: [CompanyVoteDistributionResponseDto] })
+  async getAllMutualized(): Promise<CompanyVoteDistributionResponseDto[]> {
+    return this.getAllMutualizedUseCase.execute();
   }
 
   private toResponseDto(

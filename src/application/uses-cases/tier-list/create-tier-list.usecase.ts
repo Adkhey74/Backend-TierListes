@@ -33,6 +33,8 @@ export class CreateTierListUseCase {
   ) {}
 
   async execute(command: CreateTierListCommand): Promise<TierList> {
+    console.log(command.items);
+
     const tierList = await this.tierListRepository.create({
       userId: command.userId,
       title: command.title,
