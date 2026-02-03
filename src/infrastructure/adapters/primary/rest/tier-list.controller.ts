@@ -2,10 +2,12 @@ import {
   Controller,
   Get,
   Post,
+  Put,
+  Delete,
   Param,
   Body,
   UseGuards,
-  Delete,
+  StreamableFile,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -28,6 +30,7 @@ import { ProcessPaymentUseCase } from '../../../../application/uses-cases/paymen
 import {
   CreateMutualizedUseCase,
   UpdateMutualizedUseCase,
+  DownloadMutualizedPdfUseCase,
   GetAllMutualizedUseCase,
 } from '../../../../application/uses-cases/mutualized';
 import {
@@ -37,6 +40,8 @@ import {
   PaymentResponseDto,
   MutualizedTierListResponseDto,
   SaveItemsToTierListDto,
+  CreateMutualizedDto,
+  UpdateMutualizedDto,
 } from '../dto/tier-list.dto';
 import { TierList } from '../../../../domain/entities/tier-list.entity';
 import { TierListItem } from '../../../../domain/entities/tier-list-item.entity';
@@ -52,6 +57,7 @@ export class TierListController {
     private readonly processPaymentUseCase: ProcessPaymentUseCase,
     private readonly createMutualizedUseCase: CreateMutualizedUseCase,
     private readonly updateMutualizedUseCase: UpdateMutualizedUseCase,
+    private readonly downloadMutualizedPdfUseCase: DownloadMutualizedPdfUseCase,
     private readonly getAllMutualizedUseCase: GetAllMutualizedUseCase,
     private readonly saveItemsToTierListUseCase: SaveItemsToTierListUseCase,
     private readonly deleteTierListUseCase: DeleteTierListUseCase,
@@ -147,6 +153,61 @@ export class TierListController {
   }
 
   // Endpoints Mutualized
+  @Post('mutualized')
+  @ApiOperation({ summary: 'Créer une entrée mutualisée (company + catégorie + nombre de votes)' })
+  @ApiResponse({ status: 201, description: 'Entrée mutualisée créée' })
+  @ApiResponse({ status: 400, description: 'Données invalides' })
+  async createMutualized(
+    @Body() dto: CreateMutualizedDto,
+  ): Promise<MutualizedTierListResponseDto> {
+    const m = await this.createMutualizedUseCase.execute({
+      companyId: dto.companyId,
+      category: dto.category as 'S' | 'A' | 'B' | 'C' | 'D',
+      numberOfVotes: dto.numberOfVotes,
+    });
+    return {
+      companyId: m.companyId,
+      category: m.category,
+      numberOfVotes: m.numberOfVotes,
+      createdAt: m.createdAt ?? new Date(),
+      updatedAt: m.updatedAt ?? new Date(),
+    };
+  }
+
+  @Put('mutualized')
+  @ApiOperation({ summary: 'Mettre à jour le nombre de votes d’une entrée mutualisée' })
+  @ApiResponse({ status: 200, description: 'Entrée mutualisée mise à jour' })
+  async updateMutualized(
+    @Body() dto: UpdateMutualizedDto,
+  ): Promise<MutualizedTierListResponseDto> {
+    const m = await this.updateMutualizedUseCase.execute({
+      companyId: dto.companyId,
+      category: dto.category as 'S' | 'A' | 'B' | 'C' | 'D',
+      numberOfVotes: dto.numberOfVotes,
+    });
+    return {
+      companyId: m.companyId,
+      category: m.category,
+      numberOfVotes: m.numberOfVotes,
+      createdAt: m.createdAt ?? new Date(),
+      updatedAt: m.updatedAt ?? new Date(),
+    };
+  }
+
+  @Get('mutualized/pdf/download')
+  @ApiOperation({
+    summary: 'Télécharger le PDF rapport mutualisé (toutes les entreprises)',
+  })
+  @ApiResponse({ status: 200, description: 'Fichier PDF en téléchargement' })
+  async downloadMutualizedPdf(): Promise<StreamableFile> {
+    const buffer = await this.downloadMutualizedPdfUseCase.execute();
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition:
+        'attachment; filename="rapport-mutualized-toutes-entreprises.pdf"',
+    });
+  }
+
   @Get('mutualized/all')
   @ApiOperation({ summary: 'Récupérer tous les classements mutualisés' })
   @ApiResponse({ status: 200, type: [MutualizedTierListResponseDto] })

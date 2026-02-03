@@ -3,6 +3,7 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { MutualizedTierList } from '../../../../domain/entities/mutualized-tier-list.entity';
 import {
   MutualizedTierListRepositoryPort,
+  CompanyVoteDistribution,
   CreateMutualizedTierListData,
   UpdateMutualizedTierListData,
 } from '../../../../domain/ports/repositories/mutualized-tier-list.repository.port';
@@ -30,6 +31,52 @@ export class PrismaMutualizedRepository implements MutualizedTierListRepositoryP
   async findAll(): Promise<MutualizedTierList[]> {
     const mutualizedList = await this.prisma.mutualizedTierList.findMany();
     return mutualizedList.map((m) => this.toDomain(m));
+  }
+
+  async findAllCompaniesWithVoteDistribution(): Promise<
+    CompanyVoteDistribution[]
+  > {
+    const companies = await this.prisma.company.findMany({
+      include: { mutualizedTierLists: true },
+      orderBy: { name: 'asc' },
+    });
+    return companies.map((company) => {
+      const voteDistribution = { S: 0, A: 0, B: 0, C: 0, D: 0 };
+      for (const row of company.mutualizedTierLists) {
+        const cat = row.category as keyof typeof voteDistribution;
+        if (cat in voteDistribution) {
+          voteDistribution[cat] = row.numberOfVotes;
+        }
+      }
+      return {
+        companyName: company.name,
+        voteDistribution,
+      };
+    });
+  }
+
+  async findByCompanyId(
+    companyId: string,
+  ): Promise<CompanyVoteDistribution | null> {
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      include: {
+        mutualizedTierLists: true,
+      },
+    });
+    if (!company) return null;
+
+    const voteDistribution = { S: 0, A: 0, B: 0, C: 0, D: 0 };
+    for (const row of company.mutualizedTierLists) {
+      const cat = row.category as keyof typeof voteDistribution;
+      if (cat in voteDistribution) {
+        voteDistribution[cat] = row.numberOfVotes;
+      }
+    }
+    return {
+      companyName: company.name,
+      voteDistribution,
+    };
   }
 
   async findByCompanyIdAndCategory(

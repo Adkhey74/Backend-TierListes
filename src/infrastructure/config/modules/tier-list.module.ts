@@ -8,7 +8,7 @@ import { PrismaMutualizedRepository } from '../../adapters/secondary/repositorie
 
 // Services
 import { StripePaymentService } from '../../adapters/secondary/services/stripe-payment.service';
-// import { PdfGeneratorService } from '../../adapters/secondary/services/pdf-generator.service';
+import { PdfGeneratorService } from '../../adapters/secondary/services/pdf-generator.service';
 import { MinioStorageService } from '../../adapters/secondary/services/minio-storage.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -17,7 +17,7 @@ import { TIER_LIST_REPOSITORY } from '../../../domain/ports/repositories/tier-li
 import { PAYMENT_REPOSITORY } from '../../../domain/ports/repositories/payment.repository.port';
 import { MUTUALIZED_TIER_LIST_REPOSITORY } from '../../../domain/ports/repositories/mutualized-tier-list.repository.port';
 import { PAYMENT_GATEWAY } from '../../../domain/ports/services/payment.gateway.port';
-// import { PDF_GENERATOR } from '../../../domain/ports/services/pdf-generator.port';
+import { PDF_GENERATOR } from '../../../domain/ports/services/pdf-generator.port';
 import { STORAGE_SERVICE } from '../../../domain/ports/services/storage.service.port';
 
 // Use Cases - TierList
@@ -36,6 +36,8 @@ import { ProcessPaymentUseCase } from '../../../application/uses-cases/payment';
 import {
   CreateMutualizedUseCase,
   UpdateMutualizedUseCase,
+  DownloadMutualizedPdfUseCase,
+  GeneratePdfUseCase,
   GetAllMutualizedUseCase,
 } from '../../../application/uses-cases/mutualized';
 
@@ -63,9 +65,10 @@ import {
       provide: PAYMENT_GATEWAY,
       useClass: StripePaymentService,
     },
-    // {
-    //   provide: PDF_GENERATOR,
-    // },
+    {
+      provide: PDF_GENERATOR,
+      useClass: PdfGeneratorService,
+    },
     {
       provide: STORAGE_SERVICE,
       useClass: MinioStorageService,
@@ -80,6 +83,8 @@ import {
     ProcessPaymentUseCase,
     CreateMutualizedUseCase,
     UpdateMutualizedUseCase,
+    DownloadMutualizedPdfUseCase,
+    GeneratePdfUseCase,
     GetAllMutualizedUseCase,
   ],
   exports: [

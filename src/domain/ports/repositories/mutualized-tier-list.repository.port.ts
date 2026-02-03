@@ -12,8 +12,21 @@ export interface UpdateMutualizedTierListData {
   numberOfVotes: number;
 }
 
+export interface CompanyVoteDistribution {
+  companyName: string;
+  voteDistribution: {
+    S: number;
+    A: number;
+    B: number;
+    C: number;
+    D: number;
+  };
+}
+
 export interface MutualizedTierListRepositoryPort {
   findAll(): Promise<MutualizedTierList[]>;
+  findAllCompaniesWithVoteDistribution(): Promise<CompanyVoteDistribution[]>;
+  findByCompanyId(companyId: string): Promise<CompanyVoteDistribution | null>;
   findByCompanyIdAndCategory(
     companyId: string,
     category: string,
