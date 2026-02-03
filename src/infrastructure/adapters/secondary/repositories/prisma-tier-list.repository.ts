@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import {
   TierList,
@@ -10,6 +10,7 @@ import {
   TierListRepositoryPort,
   CreateTierListData,
   CreateTierListItemData,
+  UpdateTierListData,
 } from '../../../../domain/ports/repositories/tier-list.repository.port';
 import { TierListStatus as PrismaTierListStatus } from 'generated/prisma/enums';
 
@@ -110,6 +111,24 @@ export class PrismaTierListRepository implements TierListRepositoryPort {
     return this.toDomain(tierList, []);
   }
 
+  async update(
+    id: string,
+    userId: string,
+    data: UpdateTierListData,
+  ): Promise<TierList> {
+    const tierList = await this.findById(id);
+    if (!tierList || tierList.userId !== userId) {
+      throw new NotFoundException('TierList not found');
+    }
+
+    const tierListEdited = await this.prisma.tierList.update({
+      where: { id },
+      data: { title: data.title },
+    });
+
+    return this.toDomain(tierListEdited);
+  }
+
   async updateStatus(id: string, status: TierListStatus): Promise<TierList> {
     const tierList = await this.prisma.tierList.update({
       where: { id },
@@ -168,6 +187,12 @@ export class PrismaTierListRepository implements TierListRepositoryPort {
         companyId: item.logoId,
         category: item.category.toString(),
       })),
+    });
+  }
+
+  async deleteItems(tierListId: string): Promise<void> {
+    await this.prisma.tierListItem.deleteMany({
+      where: { tierListId },
     });
   }
 }

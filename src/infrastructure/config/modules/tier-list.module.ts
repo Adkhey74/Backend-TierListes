@@ -27,6 +27,7 @@ import {
   GetUserTierListsUseCase,
   GetTierListByIdUseCase,
   SaveItemsToTierListUseCase,
+  UpdateTierListUseCase,
 } from '../../../application/uses-cases/tier-list';
 
 // Use Cases - Payment
@@ -76,6 +77,7 @@ import {
 
     // Use Cases
     CreateTierListUseCase,
+    UpdateTierListUseCase,
     DeleteTierListUseCase,
     GetUserTierListsUseCase,
     GetTierListByIdUseCase,

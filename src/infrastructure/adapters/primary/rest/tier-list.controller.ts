@@ -8,6 +8,7 @@ import {
   Body,
   UseGuards,
   StreamableFile,
+  Patch,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -25,6 +26,7 @@ import {
   GetUserTierListsUseCase,
   GetTierListByIdUseCase,
   SaveItemsToTierListUseCase,
+  UpdateTierListUseCase,
 } from '../../../../application/uses-cases/tier-list';
 import { ProcessPaymentUseCase } from '../../../../application/uses-cases/payment';
 import {
@@ -52,6 +54,7 @@ import { DeleteTierListUseCase } from 'src/application/uses-cases/tier-list/dele
 export class TierListController {
   constructor(
     private readonly createTierListUseCase: CreateTierListUseCase,
+    private readonly updateTierListUseCase: UpdateTierListUseCase,
     private readonly getUserTierListsUseCase: GetUserTierListsUseCase,
     private readonly getTierListByIdUseCase: GetTierListByIdUseCase,
     private readonly processPaymentUseCase: ProcessPaymentUseCase,
@@ -85,6 +88,30 @@ export class TierListController {
     return this.toResponseDto(tierList, hasItems);
   }
 
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Mettre à jour une TierList',
+  })
+  @ApiResponse({ status: 201, type: TierListResponseDto })
+  async update(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') id: string,
+    @Body() dto: CreateTierListDto,
+  ): Promise<TierListResponseDto> {
+    const { title, items } = dto;
+    const tierList = await this.updateTierListUseCase.execute({
+      userId: user.id,
+      id,
+      title,
+      items,
+    });
+
+    const hasItems = (tierList.items?.length ?? 0) > 0;
+    return this.toResponseDto(tierList, hasItems);
+  }
+
   @Get('my')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -102,7 +129,7 @@ export class TierListController {
   @ApiResponse({ status: 200, type: TierListResponseDto })
   async getById(@Param('id') id: string): Promise<TierListResponseDto | null> {
     const tierList = await this.getTierListByIdUseCase.execute(id);
-    return tierList ? this.toResponseDto(tierList) : null;
+    return tierList ? this.toResponseDto(tierList, true) : null;
   }
 
   @Delete(':id')
@@ -154,7 +181,10 @@ export class TierListController {
 
   // Endpoints Mutualized
   @Post('mutualized')
-  @ApiOperation({ summary: 'Créer une entrée mutualisée (company + catégorie + nombre de votes)' })
+  @ApiOperation({
+    summary:
+      'Créer une entrée mutualisée (company + catégorie + nombre de votes)',
+  })
   @ApiResponse({ status: 201, description: 'Entrée mutualisée créée' })
   @ApiResponse({ status: 400, description: 'Données invalides' })
   async createMutualized(
@@ -175,7 +205,9 @@ export class TierListController {
   }
 
   @Put('mutualized')
-  @ApiOperation({ summary: 'Mettre à jour le nombre de votes d’une entrée mutualisée' })
+  @ApiOperation({
+    summary: 'Mettre à jour le nombre de votes d’une entrée mutualisée',
+  })
   @ApiResponse({ status: 200, description: 'Entrée mutualisée mise à jour' })
   async updateMutualized(
     @Body() dto: UpdateMutualizedDto,

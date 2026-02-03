@@ -43,4 +43,3 @@ export class LogoController {
     return logo as LogoResponseDto;
   }
 }
-

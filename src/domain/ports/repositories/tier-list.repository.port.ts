@@ -12,16 +12,26 @@ export interface CreateTierListItemData {
   categoryRank: CategoryRank;
 }
 
+export interface UpdateTierListData {
+  title: string;
+}
+
 export interface TierListRepositoryPort {
   findAll(): Promise<TierList[]>;
   findById(id: string): Promise<TierList | null>;
   findByUserId(userId: string): Promise<TierList[]>;
   create(data: CreateTierListData): Promise<TierList>;
+  update(
+    id: string,
+    userId: string,
+    data: UpdateTierListData,
+  ): Promise<TierList>;
   updateStatus(id: string, status: TierListStatus): Promise<TierList>;
   delete(id: string): Promise<void>;
 
   // Items
   saveItems(items: TierListItem[], tierListId: string): Promise<void>;
+  deleteItems(tierListId: string): Promise<void>;
   getItems(tierListId: string): Promise<TierListItem[]>;
 }
 
