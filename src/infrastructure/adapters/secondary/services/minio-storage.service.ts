@@ -59,6 +59,19 @@ export class MinioStorageService implements StorageServicePort {
     );
   }
 
+  async getFile(fileName: string): Promise<Buffer> {
+    const stream = await this.minioClient.getObject(
+      this.bucketName,
+      fileName,
+    );
+    const chunks: Buffer[] = [];
+    return new Promise((resolve, reject) => {
+      stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+      stream.on('end', () => resolve(Buffer.concat(chunks)));
+      stream.on('error', reject);
+    });
+  }
+
   async deleteFile(fileName: string): Promise<void> {
     await this.minioClient.removeObject(this.bucketName, fileName);
   }

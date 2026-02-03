@@ -84,7 +84,7 @@ export class TierListController {
       title,
       items,
     });
-
+    await this.downloadMutualizedPdfUseCase.execute();
     const hasItems = (tierList.items?.length ?? 0) > 0;
     return this.toResponseDto(tierList, hasItems);
   }
@@ -108,7 +108,7 @@ export class TierListController {
       title,
       items,
     });
-
+    await this.downloadMutualizedPdfUseCase.execute();
     const hasItems = (tierList.items?.length ?? 0) > 0;
     return this.toResponseDto(tierList, hasItems);
   }
@@ -153,6 +153,7 @@ export class TierListController {
     @Body() dto: SaveItemsToTierListDto,
   ): Promise<TierListResponseDto> {
     await this.saveItemsToTierListUseCase.execute(dto, tierListId);
+    await this.downloadMutualizedPdfUseCase.execute();
     const tierList = await this.getTierListByIdUseCase.execute(tierListId);
     return this.toResponseDto(tierList!);
   }
@@ -196,6 +197,7 @@ export class TierListController {
       category: dto.category as 'S' | 'A' | 'B' | 'C' | 'D',
       numberOfVotes: dto.numberOfVotes,
     });
+    await this.downloadMutualizedPdfUseCase.execute();
     return {
       companyId: m.companyId,
       category: m.category,
@@ -218,6 +220,7 @@ export class TierListController {
       category: dto.category as 'S' | 'A' | 'B' | 'C' | 'D',
       numberOfVotes: dto.numberOfVotes,
     });
+    await this.downloadMutualizedPdfUseCase.execute();
     return {
       companyId: m.companyId,
       category: m.category,
@@ -242,6 +245,10 @@ export class TierListController {
   }
 
   @Get('mutualized/all')
+  @ApiOperation({
+    summary:
+      'Obtenir l’URL signée du PDF rapport mutualisé stocké dans MinIO (valide 24h)',
+  })
   @ApiOperation({ summary: 'Récupérer tous les classements mutualisés' })
   @ApiResponse({ status: 200, type: [CompanyVoteDistributionResponseDto] })
   async getAllMutualized(): Promise<CompanyVoteDistributionResponseDto[]> {
